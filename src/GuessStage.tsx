@@ -39,7 +39,7 @@ export function GuessStage({
                 {option === round.myGuess && error}
               </span>
               <div className="flex gap-2 items-center text-lg">
-                <label className="flex-grow ">
+                <label className="grow ">
                   <button
                     onClick={async () => {
                       setError(undefined);

@@ -1,10 +1,6 @@
 "use node";
 import { internal } from "./_generated/api";
-import {
-  Configuration,
-  CreateModerationResponseResultsInner,
-  OpenAIApi,
-} from "openai";
+import { OpenAI } from "openai";
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { OptionResult } from "./round";
@@ -22,10 +18,10 @@ export const addOption = action({
   ): Promise<OptionResult> => {
     const openai = makeOpenAIClient();
     // Check if the prompt is offensive.
-    const modResponse = await openai.createModeration({
+    const modResponse = await openai.moderations.create({
       input: prompt,
     });
-    const modResult = modResponse.data.results[0];
+    const modResult = modResponse.results[0];
     if (modResult.flagged) {
       return {
         success: false,
@@ -50,14 +46,14 @@ const makeOpenAIClient = () => {
   if (!apiKey) {
     throw new Error(
       "Add your OPENAI_API_KEY as an env variable in the " +
-        "[dashboard](https://dasboard.convex.dev)"
+      "[dashboard](https://dasboard.convex.dev)"
     );
   }
-  return new OpenAIApi(new Configuration({ apiKey }));
+  return new OpenAI({ apiKey });
 };
 
 const flaggedCategories = (
-  modResult: CreateModerationResponseResultsInner
+  modResult: OpenAI.Moderations.ModerationCreateResponse['results'][0]
 ): string[] => {
   return Object.entries(modResult.categories)
     .filter(([, flagged]) => flagged)
@@ -93,10 +89,10 @@ export const createImage = internalAction({
       },
     });
     // Check if the prompt is offensive.
-    const modResponse = await openai.createModeration({
+    const modResponse = await openai.moderations.create({
       input: prompt,
     });
-    const modResult = modResponse.data.results[0];
+    const modResult = modResponse.results[0];
     if (modResult.flagged) {
       await fail(
         `Your prompt was flagged: ${flaggedCategories(modResult).join(", ")}`
@@ -111,11 +107,11 @@ export const createImage = internalAction({
       },
     });
     // Query OpenAI for the image.
-    const opanaiResponse = await openai.createImage({
+    const opanaiResponse = await openai.images.generate({
       prompt,
       size: "512x512",
     });
-    const dallEImageUrl = opanaiResponse.data.data[0]["url"];
+    const dallEImageUrl = opanaiResponse.data?.[0].url;
     if (!dallEImageUrl) return await fail("No image URL returned from OpenAI");
 
     await ctx.runMutation(internal.submissions.update, {
